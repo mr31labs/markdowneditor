@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minimal Markdown Editor</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f8fa;
+      --panel: #ffffff;
+      --text: #1f2328;
+      --muted: #57606a;
+      --border: #d0d7de;
+      --accent: #0969da;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --border: #30363d;
+        --accent: #58a6ff;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    h1 { margin: 0; font-size: 1.1rem; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      padding: 1rem;
+      min-height: 0;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: 0;
+      padding: 1rem;
+      resize: none;
+      font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--text);
+      background: transparent;
+    }
+
+    .preview {
+      padding: 1rem;
+      overflow: auto;
+      line-height: 1.6;
+    }
+
+    .preview h1, .preview h2, .preview h3 { line-height: 1.3; }
+    .preview code { background: color-mix(in srgb, var(--accent) 12%, transparent); padding: 0.1rem 0.3rem; border-radius: 4px; }
+    .preview pre { padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; }
+    .preview blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--border); color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Minimal Markdown Editor</h1>
+  </header>
+
+  <main class="app">
+    <section class="panel">
+      <h2>Markdown Input</h2>
+      <textarea id="markdownInput"># Welcome 👋
+
+Type **Markdown** on the left panel and see the live preview on the right.
+
+## Supported basics
+- Headings
+- **Bold** and *italic*
+- `inline code`
+- [Links](https://www.markdownguide.org)
+- > Blockquotes
+
+```js
+console.log('Hello markdown editor');
+```
+</textarea>
+    </section>
+
+    <section class="panel">
+      <h2>Live Preview</h2>
+      <article id="preview" class="preview"></article>
+    </section>
+  </main>
+
+  <script>
+    const input = document.getElementById('markdownInput');
+    const preview = document.getElementById('preview');
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function parseInline(text) {
+      return text
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\((https?:[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    }
+
+    function markdownToHtml(markdown) {
+      const lines = markdown.split('\n');
+      let html = '';
+      let inList = false;
+      let inCodeBlock = false;
+
+      for (const rawLine of lines) {
+        const line = rawLine.trimEnd();
+
+        if (line.startsWith('```')) {
+          if (!inCodeBlock) {
+            inCodeBlock = true;
+            html += '<pre><code>';
+          } else {
+            inCodeBlock = false;
+            html += '</code></pre>';
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          html += `${escapeHtml(rawLine)}\n`;
+          continue;
+        }
+
+        if (line.startsWith('# ')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<h1>${parseInline(escapeHtml(line.slice(2)))}</h1>`;
+        } else if (line.startsWith('## ')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<h2>${parseInline(escapeHtml(line.slice(3)))}</h2>`;
+        } else if (line.startsWith('### ')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<h3>${parseInline(escapeHtml(line.slice(4)))}</h3>`;
+        } else if (line.startsWith('- ')) {
+          if (!inList) {
+            html += '<ul>';
+            inList = true;
+          }
+          html += `<li>${parseInline(escapeHtml(line.slice(2)))}</li>`;
+        } else if (line.startsWith('> ')) {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<blockquote>${parseInline(escapeHtml(line.slice(2)))}</blockquote>`;
+        } else if (!line.trim()) {
+          if (inList) {
+            html += '</ul>';
+            inList = false;
+          }
+        } else {
+          if (inList) { html += '</ul>'; inList = false; }
+          html += `<p>${parseInline(escapeHtml(line))}</p>`;
+        }
+      }
+
+      if (inList) html += '</ul>';
+      if (inCodeBlock) html += '</code></pre>';
+
+      return html;
+    }
+
+    function render() {
+      preview.innerHTML = markdownToHtml(input.value);
+    }
+
+    input.addEventListener('input', render);
+    render();
+  </script>
+</body>
+</html>
