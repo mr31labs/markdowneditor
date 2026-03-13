@@ -744,9 +744,14 @@ This is an elegant, Apple-inspired Markdown editor with built-in AI tools.
         jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
       
-      html2pdf().set(opt).from(printDiv).save().then(() => {
-        document.body.removeChild(printDiv);
-      });
+      // We must wait for the browser to paint the new DOM nodes
+      // before html2canvas can capture them. This creates a brief
+      // "photo flash" effect that is a nice UX indicator.
+      setTimeout(() => {
+        html2pdf().set(opt).from(printDiv).save().then(() => {
+          document.body.removeChild(printDiv);
+        });
+      }, 150);
     }
 
     // --- Settings UI ---
