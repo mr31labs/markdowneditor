@@ -684,17 +684,25 @@ This is an elegant, Apple-inspired Markdown editor with built-in AI tools.
 
     // --- Export Tools ---
     function saveMD() {
+      let filename = prompt("Enter a filename for your Markdown file:", "document");
+      if (!filename) return; // User cancelled
+      if (!filename.endsWith('.md')) filename += '.md';
+
       const text = input.value;
       const blob = new Blob([text], { type: "text/markdown" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'document.md';
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     }
 
     function exportPDF() {
+      let filename = prompt("Enter a filename for your PDF file:", "document");
+      if (!filename) return; // User cancelled
+      if (!filename.endsWith('.pdf')) filename += '.pdf';
+
       const element = document.getElementById('preview');
       
       const printDiv = document.createElement('div');
@@ -718,7 +726,7 @@ This is an elegant, Apple-inspired Markdown editor with built-in AI tools.
 
       const opt = {
         margin:       0.5,
-        filename:     'document.pdf',
+        filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
